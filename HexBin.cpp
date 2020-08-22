@@ -22,7 +22,7 @@ int make_print(int ch)
     return '.';
 }
 
-void print_bin(size_t num, ssize_t length, const char *source)
+void print_bin(int fd, size_t num, ssize_t length, const char *source)
 {
     size_t begin = num * SIZE_EACH_BUFF;
     size_t count = length / LINE_LEN;
@@ -31,27 +31,33 @@ void print_bin(size_t num, ssize_t length, const char *source)
 
     for (size_t i = 0; i < count; ++i)
     {
-        printf("%08lX  %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x ; %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
-               begin + i,
+        char buffer[256] = {0x00};
+        snprintf(buffer, 256,
+                 "%08lX  %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x ; %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
+                 begin + i,
 
-               uint8_t(source[i * LINE_LEN]), uint8_t(source[i * LINE_LEN + 1]),
-               uint8_t(source[i * LINE_LEN + 2]), uint8_t(source[i * LINE_LEN + 3]),
-               uint8_t(source[i * LINE_LEN + 4]), uint8_t(source[i * LINE_LEN + 5]),
-               uint8_t(source[i * LINE_LEN + 6]), uint8_t(source[i * LINE_LEN + 7]),
-               uint8_t(source[i * LINE_LEN + 8]), uint8_t(source[i * LINE_LEN + 9]),
-               uint8_t(source[i * LINE_LEN + 10]), uint8_t(source[i * LINE_LEN + 11]),
-               uint8_t(source[i * LINE_LEN + 12]), uint8_t(source[i * LINE_LEN + 13]),
-               uint8_t(source[i * LINE_LEN + 14]), uint8_t(source[i * LINE_LEN + 15]),
+                 uint8_t(source[i * LINE_LEN]     ), uint8_t(source[i * LINE_LEN +  1]),
+                 uint8_t(source[i * LINE_LEN +  2]), uint8_t(source[i * LINE_LEN +  3]),
+                 uint8_t(source[i * LINE_LEN +  4]), uint8_t(source[i * LINE_LEN +  5]),
+                 uint8_t(source[i * LINE_LEN +  6]), uint8_t(source[i * LINE_LEN +  7]),
+                 uint8_t(source[i * LINE_LEN +  8]), uint8_t(source[i * LINE_LEN +  9]),
+                 uint8_t(source[i * LINE_LEN + 10]), uint8_t(source[i * LINE_LEN + 11]),
+                 uint8_t(source[i * LINE_LEN + 12]), uint8_t(source[i * LINE_LEN + 13]),
+                 uint8_t(source[i * LINE_LEN + 14]), uint8_t(source[i * LINE_LEN + 15]),
 
-               make_print(source[i * LINE_LEN]), make_print(source[i * LINE_LEN + 1]),
-               make_print(source[i * LINE_LEN + 2]), make_print(source[i * LINE_LEN + 3]),
-               make_print(source[i * LINE_LEN + 4]), make_print(source[i * LINE_LEN + 5]),
-               make_print(source[i * LINE_LEN + 6]), make_print(source[i * LINE_LEN + 7]),
-               make_print(source[i * LINE_LEN + 8]), make_print(source[i * LINE_LEN + 9]),
-               make_print(source[i * LINE_LEN + 10]), make_print(source[i * LINE_LEN + 11]),
-               make_print(source[i * LINE_LEN + 12]), make_print(source[i * LINE_LEN + 13]),
-               make_print(source[i * LINE_LEN + 14]), make_print(source[i * LINE_LEN + 15])
-              );
+                 make_print(source[i * LINE_LEN]     ), make_print(source[i * LINE_LEN +  1]),
+                 make_print(source[i * LINE_LEN +  2]), make_print(source[i * LINE_LEN +  3]),
+                 make_print(source[i * LINE_LEN +  4]), make_print(source[i * LINE_LEN +  5]),
+                 make_print(source[i * LINE_LEN +  6]), make_print(source[i * LINE_LEN +  7]),
+                 make_print(source[i * LINE_LEN +  8]), make_print(source[i * LINE_LEN +  9]),
+                 make_print(source[i * LINE_LEN + 10]), make_print(source[i * LINE_LEN + 11]),
+                 make_print(source[i * LINE_LEN + 12]), make_print(source[i * LINE_LEN + 13]),
+                 make_print(source[i * LINE_LEN + 14]), make_print(source[i * LINE_LEN + 15])
+                );
+
+        printf("%s", buffer);
+        size_t str_len = strlen(buffer);
+        write(fd, buffer, str_len);
     }
 }
 
@@ -64,11 +70,18 @@ int main(int argc, char *argv[])
     }
 
     const char *file_name = argv[1];
+    const char *out_name = argv[2];
     int fd = open(file_name, O_RDONLY);
     if (fd < 0)
     {
         printf("can not open file: %s\n", file_name);
         exit(1);
+    }
+
+    int outfd = open(out_name, O_WRONLY);
+    if (outfd < 0)
+    {
+        printf("can not open write file: %s\n", out_name);
     }
 
     struct stat st {};
@@ -91,12 +104,17 @@ int main(int argc, char *argv[])
     {
         memset(buffer, 0x00, BUFF_LEN);
         ssize_t len = read(fd, buffer, BUFF_LEN);
-        print_bin(i, len, buffer);
+        print_bin(outfd, i, len, buffer);
     }
 
     if (fd > 0)
     {
         close(fd);
+    }
+
+    if (outfd > 0)
+    {
+        close(outfd);
     }
 
     return 0;
